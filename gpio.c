@@ -88,7 +88,7 @@ static int open_gpio(GPIO_INDEX gpio_name)
     return 1;
 }
 
-static int init_gpio()
+int init_gpio()
 {
     int ret = 0;
     int i = 0;
@@ -112,7 +112,7 @@ static int init_gpio()
     return 1;
 }
 
-static int set_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES gpio_set)
+int set_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES gpio_set)
 {
     int ret = 0;
     struct gpio_v2_line_values gpio_val = {
@@ -135,7 +135,7 @@ static int set_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES gpio_set)
     return 1;
 }
 
-static int get_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES *gpio_get)
+int get_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES *gpio_get)
 {
     int ret = 0;
     struct gpio_v2_line_values gpio_val = {

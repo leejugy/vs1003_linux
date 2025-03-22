@@ -56,6 +56,7 @@ typedef enum
 {
     GPIO_LOW,
     GPIO_HIGH,
+    GPIO_NONE,
 } GPIO_VALUES;
 
 #define SET_GPIO_XCS_HIGH set_gpio_value(GPIO_INDEX_OUT_XCS, GPIO_HIGH)
@@ -67,6 +68,11 @@ typedef enum
 #define SET_GPIO_XRST_HIGH set_gpio_value(GPIO_INDEX_OUT_XRST, GPIO_HIGH)
 #define SET_GPIO_XRST_LOW set_gpio_value(GPIO_INDEX_OUT_XRST, GPIO_LOW)
 
-#define GET_DREQ get_gpio_value(GPIO_INDEX_IN_DREQ)
+#define GET_DREQ(gpio_val_add) get_gpio_value(GPIO_INDEX_IN_DREQ, gpio_val_add)
+
+int set_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES gpio_set);
+int get_gpio_value(GPIO_INDEX gpio_name, GPIO_VALUES *gpio_get);
+
+int init_gpio();
 
 #endif
