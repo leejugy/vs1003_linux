@@ -285,7 +285,6 @@ static void down_vs1003_volume()
 static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_FLAG *reset)
 {
     static int fd = -1;
-    static char *current_music = NULL;
     int ret = 0;
 
     uint8_t send_buffer[256] = {
@@ -306,7 +305,6 @@ static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_F
 
         fd = ret;
         *reset = VS1003_MUSIC_RESET_NONE;
-        current_music = music_route;
     }
 
     ret = read(fd, send_buffer, sizeof(send_buffer));
@@ -395,6 +393,7 @@ static void print_vs1003_reg_full_duplex(uint8_t reg)
 static int select_music()
 {
     int ret = 0;
+    int err = 0;
     printf("===================\n");
     printf("1. Mesmerize.mp3\n");
     printf("2. Places_Like_That.mp3\n");
@@ -407,7 +406,12 @@ static int select_music()
     printf("9. down volume\n");
     printf("===================\n");
     printf("select music:");
-    scanf("%d", &ret);
+    
+    err = scanf("%d", &ret);
+    if(err != 1)
+    {
+        FATAL("scnaf overrun");
+    }
     return ret;
 }
 

@@ -123,8 +123,8 @@ int send_recv_spi_full_duplex(SPI_DEVICE_INDEX spi_dev, uint8_t *recv, uint8_t *
 
     struct spi_ioc_transfer spi_msg = {0, };
 
-    spi_msg.rx_buf = recv;
-    spi_msg.tx_buf = send;
+    spi_msg.rx_buf = (uint32_t)recv; //32bit 프로세서의 포인터 주소 비트 크기가 32비트 임에 주의하자.
+    spi_msg.tx_buf = (uint32_t)send;
     spi_msg.len = max_buffer_size;
     
     sem_wait(&spi[spi_dev].sem);
