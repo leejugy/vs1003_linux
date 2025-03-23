@@ -64,6 +64,12 @@ typedef enum
     VS1003_MUSIC_RESET_NONE,
 }VS1003_RESET_FLAG;
 
+typedef enum
+{
+    VS1003_MUSIC_STOP,
+    VS1003_MUSIC_PLAY,
+}VS1003_PLAY_STATUS_FLAG;
+
 void start_vs1003_thread();
 
 #endif

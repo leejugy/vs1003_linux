@@ -408,7 +408,7 @@ static int select_music()
     printf("select music:");
 
     err = scanf("%d", &ret);
-    if(err != 1)
+    if (err != 1)
     {
         FATAL("scanf overrun");
     }
@@ -473,6 +473,7 @@ static void thread_vs1003()
     VS1003_MUSIC_COMMAND current_music = VS1003_MUSIC_NONE;
     VS1003_MUSIC_COMMAND cmd = VS1003_MUSIC_NONE;
     VS1003_RESET_FLAG reset = VS1003_MUSIC_RESET_DO;
+    VS1003_PLAY_STATUS_FLAG current_flag = VS1003_MUSIC_STOP;
     int ret = 0;
     char(*music_route[]) = {"./Mesmerize.mp3", "./Places_Like_That.mp3", "./Sunburst.mp3"};
 
@@ -485,6 +486,7 @@ static void thread_vs1003()
             if (current_music != cmd)
             {
                 reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
                 current_music = cmd;
             }
             ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
@@ -494,6 +496,7 @@ static void thread_vs1003()
             if (current_music != cmd)
             {
                 reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
                 current_music = cmd;
             }
             ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
@@ -503,6 +506,7 @@ static void thread_vs1003()
             if (current_music != cmd)
             {
                 reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
                 current_music = cmd;
             }
             ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
@@ -510,30 +514,54 @@ static void thread_vs1003()
 
         case VS1003_MUSIC_PAUSE:
             set_vs1003_command(VS1003_MUSIC_NONE);
+            current_flag = VS1003_MUSIC_STOP;
             break;
 
         case VS1003_MUSIC_RESUME:
             set_vs1003_command(current_music);
+            current_flag = VS1003_MUSIC_PLAY;
             break;
 
         case VS1003_MUSIC_RESET:
             reset = VS1003_MUSIC_RESET_DO;
             set_vs1003_command(current_music);
+            current_flag = VS1003_MUSIC_PLAY;
             break;
 
         case VS1003_MUSIC_VOLUME_INFO:
+            if (current_flag == VS1003_MUSIC_PLAY)
+            {
+                set_vs1003_command(current_music);
+            }
+            else
+            {
+                set_vs1003_command(VS1003_MUSIC_NONE);
+            }
             print_vs1003_volume();
-            set_vs1003_command(current_music);
             break;
 
         case VS1003_MUSIC_VOLUME_UP:
+            if (current_flag == VS1003_MUSIC_PLAY)
+            {
+                set_vs1003_command(current_music);
+            }
+            else
+            {
+                set_vs1003_command(VS1003_MUSIC_NONE);
+            }
             up_vs1003_volume();
-            set_vs1003_command(current_music);
             break;
 
         case VS1003_MUSIC_VOLUME_DOWN:
+            if (current_flag == VS1003_MUSIC_PLAY)
+            {
+                set_vs1003_command(current_music);
+            }
+            else
+            {
+                set_vs1003_command(VS1003_MUSIC_NONE);
+            }
             down_vs1003_volume();
-            set_vs1003_command(current_music);
             break;
 
         default:
