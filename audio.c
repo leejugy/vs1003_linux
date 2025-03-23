@@ -43,7 +43,7 @@ int read_mp3_header(char *mp3_file_route, mp3_id_tag_t *mp3_id, mp3_header_t *mp
     }
 
     tag_size = (mp3_id->size[0] << 21) + (mp3_id->size[1] << 14) + (mp3_id->size[2] << 7) + mp3_id->size[3];
-    lseek(fd, tag_size + 10, SEEK_SET);
+    lseek(fd, tag_size + sizeof(mp3_id_tag_t), SEEK_SET);
 
     ret = read(fd, temp, sizeof(temp));
     if (ret < 0)
