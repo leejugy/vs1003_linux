@@ -406,11 +406,11 @@ static int select_music()
     printf("9. down volume\n");
     printf("===================\n");
     printf("select music:");
-    
+
     err = scanf("%d", &ret);
     if(err != 1)
     {
-        FATAL("scnaf overrun");
+        FATAL("scanf overrun");
     }
     return ret;
 }
