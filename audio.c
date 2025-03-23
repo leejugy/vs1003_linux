@@ -39,6 +39,7 @@ int read_mp3_header(char *mp3_file_route, mp3_id_tag_t *mp3_id, mp3_header_t *mp
     if (ret < 0)
     {
         perror("fail to read mp3");
+        close(fd);
         return ret;
     }
 
@@ -49,6 +50,7 @@ int read_mp3_header(char *mp3_file_route, mp3_id_tag_t *mp3_id, mp3_header_t *mp
     if (ret < 0)
     {
         perror("fail to read mp3");
+        close(fd);
         return ret;
     }
 
@@ -56,6 +58,7 @@ int read_mp3_header(char *mp3_file_route, mp3_id_tag_t *mp3_id, mp3_header_t *mp
     if (mp3_header->syncword != 0x7ff)
     {
         FATAL("invalid header\n");
+        close(fd);
         return ret;
     }
 
