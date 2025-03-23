@@ -543,6 +543,7 @@ static void thread_vs1003()
         if (ret == VS1003_MP3_END_MUSIC || ret == VS1003_MP3_ERR)
         {
             current_music = VS1003_MUSIC_NONE;
+            set_vs1003_command(VS1003_MUSIC_NONE);
             reset = VS1003_MUSIC_RESET_DO;
         }
     }
