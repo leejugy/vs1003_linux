@@ -7,3 +7,4 @@ export OBJECT="vs1003"
 
 make -j
 cp vs1003 ~/share
+sync

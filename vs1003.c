@@ -140,7 +140,7 @@ static void set_vs1003_audio_config(char *music_route)
     reset_spi_frequency(SPI_DEV_VS1003, spi_freq);
 }
 
-static void set_vs1003_clock_frequency()
+static void set_vs1003_default_clock_frequency()
 {
     uint8_t send_data[SET_COMMAND_DATA_SIZE] = {
         0,
@@ -152,6 +152,34 @@ static void set_vs1003_clock_frequency()
     send_data[send_index++] = clock_freq & 0xff;
 
     set_command_vs1003_half_duplex(VS1003_SCI_CLOCK_FREQUNECY, send_data, send_index);
+}
+
+static void set_vs1003_default_bass()
+{
+    uint8_t send_data[SET_COMMAND_DATA_SIZE] = {
+        0,
+    };
+    uint16_t bass = 0xffff;
+    int send_index = 0;
+
+    send_data[send_index++] = (bass >> 8) & 0xff;
+    send_data[send_index++] = bass & 0xff;
+
+    set_command_vs1003_half_duplex(VS1003_SCI_BASS, send_data, send_index);
+}
+
+static void set_vs1003_default_volume()
+{
+    uint8_t send_data[SET_COMMAND_DATA_SIZE] = {
+        0,
+    };
+    uint16_t volume = 0x4040;
+    int send_index = 0;
+
+    send_data[send_index++] = (volume >> 8) & 0xff;
+    send_data[send_index++] = volume & 0xff;
+
+    set_command_vs1003_half_duplex(VS1003_SCI_VOLUME, send_data, send_index);
 }
 
 static void get_vs1003_volume(uint8_t *reg_data, size_t data_size)
@@ -254,39 +282,53 @@ static void down_vs1003_volume()
     }
 }
 
-static int play_vs1003_mp3_music(char *music_route)
+static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_FLAG *reset)
 {
+    static int fd = -1;
+    static char *current_music = NULL;
     int ret = 0;
-    int fd = 0;
-    uint8_t send_buffer[1024] = {
+
+    uint8_t send_buffer[256] = {
         0,
     };
 
-    set_vs1003_audio_config(music_route);
-
-    ret = open(music_route, O_RDONLY);
-    if (ret < 0)
+    if (*reset == VS1003_MUSIC_RESET_DO)
     {
-        perror("fail to open music");
-        return ret;
-    }
+        close(fd);
+        set_vs1003_audio_config(music_route);
 
-    fd = ret;
-
-    while (1)
-    {
-        ret = read(fd, send_buffer, sizeof(send_buffer));
+        ret = open(music_route, O_RDONLY);
         if (ret < 0)
         {
-            perror("fail to read");
-            reset_spi_frequency(SPI_DEV_VS1003, SPI_CLOCK_VS1003);
-            return ret;
+            perror("fail to open music");
+            return VS1003_MP3_ERR;
         }
 
-        send_data_vs1003_half_duplex(send_buffer, ret);
+        fd = ret;
+        *reset = VS1003_MUSIC_RESET_NONE;
+        current_music = music_route;
     }
 
-    return -1;
+    ret = read(fd, send_buffer, sizeof(send_buffer));
+    if (ret < 0)
+    {
+        perror("fail to read");
+        reset_spi_frequency(SPI_DEV_VS1003, SPI_CLOCK_VS1003);
+        close(fd);
+        return VS1003_MP3_ERR;
+    }
+
+    else if (ret == 0)
+    {
+        INFO("end music");
+        reset_spi_frequency(SPI_DEV_VS1003, SPI_CLOCK_VS1003);
+        close(fd);
+        return VS1003_MP3_END_MUSIC;
+    }
+
+    send_data_vs1003_half_duplex(send_buffer, ret);
+
+    return VS1003_MP3_CONTINOUS_PLAYING;
 }
 
 #ifdef FULL_DUPLEX
@@ -350,8 +392,33 @@ static void print_vs1003_reg_full_duplex(uint8_t reg)
 }
 #endif
 
+static int select_music()
+{
+    int ret = 0;
+    printf("===================\n");
+    printf("1. Mesmerize.mp3\n");
+    printf("2. Places_Like_That.mp3\n");
+    printf("3. Sunburst.mp3\n");
+    printf("4. pause\n");
+    printf("5. resume\n");
+    printf("6. reset\n");
+    printf("7. volume info\n");
+    printf("8. up volume\n");
+    printf("9. down volume\n");
+    printf("===================\n");
+    printf("select music:");
+    scanf("%d", &ret);
+    return ret;
+}
+
+VS1003_MUSIC_COMMAND vs1003_command = 0;
+sem_t vs1003_command_sem = {
+    0,
+};
+
 static void init_vs1003()
 {
+    int ret = 0;
     SET_GPIO_XCS_HIGH;
     SET_GPIO_XDCS_HIGH;
     SET_GPIO_XRST_HIGH;
@@ -364,81 +431,152 @@ static void init_vs1003()
     wait_dreq_high();
 
     init_spi();
+
+    set_vs1003_default_clock_frequency();
+    set_vs1003_default_bass();
+    set_vs1003_default_volume();
+
+    print_vs1003_reg_half_duplex(VS1003_SCI_AUDIO_DATA);
+    print_vs1003_reg_half_duplex(VS1003_SCI_VOLUME);
+    print_vs1003_reg_half_duplex(VS1003_SCI_CLOCK_FREQUNECY);
+    print_vs1003_reg_half_duplex(VS1003_SCI_BASS);
+
+    ret = sem_init(&vs1003_command_sem, 0, 1);
+    if (ret < 0)
+    {
+        perror("fail to init sem");
+    }
 }
 
-static int select_music()
+static void set_vs1003_command(int vs1003_cmd)
+{
+    sem_wait(&vs1003_command_sem);
+    vs1003_command = vs1003_cmd;
+    sem_post(&vs1003_command_sem);
+}
+
+static int get_vs1003_command()
 {
     int ret = 0;
-    printf("===================\n");
-    printf("1. Mesmerize.mp3\n");
-    printf("2. Places_Like_That.mp3\n");
-    printf("3. Sunburst.mp3\n");
-    printf("4. volume info\n");
-    printf("5. up volume\n");
-    printf("6. down volume\n");
-    printf("===================\n");
-    printf("select music:");
-    scanf("%d", &ret);
+    sem_wait(&vs1003_command_sem);
+    ret = vs1003_command;
+    sem_post(&vs1003_command_sem);
     return ret;
 }
 
 static void thread_vs1003()
 {
-    set_vs1003_clock_frequency();
-    print_vs1003_reg_half_duplex(VS1003_SCI_AUDIO_DATA);
-    print_vs1003_reg_half_duplex(VS1003_SCI_VOLUME);
-    print_vs1003_reg_half_duplex(VS1003_SCI_CLOCK_FREQUNECY);
+    VS1003_MUSIC_COMMAND current_music = VS1003_MUSIC_NONE;
+    VS1003_MUSIC_COMMAND cmd = VS1003_MUSIC_NONE;
+    VS1003_RESET_FLAG reset = VS1003_MUSIC_RESET_DO;
+    int ret = 0;
+    char(*music_route[]) = {"./Mesmerize.mp3", "./Places_Like_That.mp3", "./Sunburst.mp3"};
 
     while (1)
     {
-        switch (select_music())
+        cmd = get_vs1003_command();
+        switch (cmd)
         {
         case VS1003_MUSIC_LIST1:
-            play_vs1003_mp3_music("./Mesmerize.mp3");
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
             break;
+
         case VS1003_MUSIC_LIST2:
-            play_vs1003_mp3_music("./Places_Like_That.mp3");
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
             break;
+
         case VS1003_MUSIC_LIST3:
-            play_vs1003_mp3_music("./Sunburst.mp3");
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
+            break;
+
+        case VS1003_MUSIC_PAUSE:
+            set_vs1003_command(VS1003_MUSIC_NONE);
+            break;
+
+        case VS1003_MUSIC_RESUME:
+            set_vs1003_command(current_music);
+            break;
+
+        case VS1003_MUSIC_RESET:
+            reset = VS1003_MUSIC_RESET_DO;
+            set_vs1003_command(current_music);
             break;
 
         case VS1003_MUSIC_VOLUME_INFO:
             print_vs1003_volume();
+            set_vs1003_command(current_music);
             break;
 
         case VS1003_MUSIC_VOLUME_UP:
             up_vs1003_volume();
+            set_vs1003_command(current_music);
             break;
 
         case VS1003_MUSIC_VOLUME_DOWN:
             down_vs1003_volume();
+            set_vs1003_command(current_music);
             break;
 
         default:
             break;
         }
+
+        if (ret == VS1003_MP3_END_MUSIC || ret == VS1003_MP3_ERR)
+        {
+            current_music = VS1003_MUSIC_NONE;
+            reset = VS1003_MUSIC_RESET_DO;
+        }
+    }
+}
+
+void thread_vs1003_command()
+{
+    while (1)
+    {
+        set_vs1003_command(select_music());
     }
 }
 
 void start_vs1003_thread()
 {
-    pthread_t tid = 0;
+    pthread_t tid[VS1003_THREAD_NUM] = {
+        0,
+    };
+    void (*function[VS1003_THREAD_NUM])() = {&thread_vs1003, &thread_vs1003_command};
     int ret = 0;
+    int i = 0;
 
     init_gpio();
     init_vs1003();
 
-    ret = pthread_create(&tid, NULL, (void *)&thread_vs1003, NULL);
-    if (ret < 0)
+    for (i = 0; i < VS1003_THREAD_NUM; i++)
     {
-        perror("fail to create vs1003 thread");
-        return;
-    }
+        ret = pthread_create(&tid[i], NULL, (void *)function[i], NULL);
+        if (ret < 0)
+        {
+            perror("fail to create vs1003 thread");
+            return;
+        }
 
-    ret = pthread_detach(tid);
-    if (ret < 0)
-    {
-        perror("fail to detach vs1003");
+        ret = pthread_detach(tid[i]);
+        if (ret < 0)
+        {
+            perror("fail to detach vs1003");
+        }
     }
 }
