@@ -479,6 +479,7 @@ static void thread_vs1003()
     VS1003_PLAY_STATUS_FLAG current_flag = VS1003_MUSIC_STOP;
     VS1003_MP3_STATUS ret = VS1003_MP3_STATUS_NONE;
     char(*music_route[]) = {"./Mesmerize.mp3", "./Places_Like_That.mp3", "./Sunburst.mp3"};
+    char old_route[256] = {0, };
 
     while (1)
     {
@@ -568,8 +569,9 @@ static void thread_vs1003()
             break;
 
         case VS1003_MUSIC_CUSTOM_ROUTE: //주의, 커스텀 루트를 바꿨다면 반드시 6. reset을 수행하자.
-            if (current_music != cmd)
+            if (current_music != cmd || strcmp(old_route, custom_music_route) != 0)
             {
+                strcpy(old_route, custom_music_route);
                 reset = VS1003_MUSIC_RESET_DO;
                 current_flag = VS1003_MUSIC_PLAY;
                 current_music = cmd;
@@ -594,7 +596,6 @@ static void thread_vs1003()
 static int get_custom_music_route()
 {
     int err = 0;
-    memset(custom_music_route, 0, sizeof(custom_music_route));
 
     printf("input your route : ");
     err = scanf("%s", custom_music_route);
