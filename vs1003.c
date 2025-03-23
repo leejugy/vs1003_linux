@@ -300,7 +300,7 @@ static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_F
         if (ret < 0)
         {
             perror("fail to open music");
-            return VS1003_MP3_ERR;
+            return VS1003_MP3_STATUS_ERR;
         }
 
         fd = ret;
@@ -313,7 +313,7 @@ static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_F
         perror("fail to read");
         reset_spi_frequency(SPI_DEV_VS1003, SPI_CLOCK_VS1003);
         close(fd);
-        return VS1003_MP3_ERR;
+        return VS1003_MP3_STATUS_ERR;
     }
 
     else if (ret == 0)
@@ -321,12 +321,12 @@ static VS1003_MP3_STATUS play_vs1003_mp3_music(char *music_route, VS1003_RESET_F
         INFO("end music");
         reset_spi_frequency(SPI_DEV_VS1003, SPI_CLOCK_VS1003);
         close(fd);
-        return VS1003_MP3_END_MUSIC;
+        return VS1003_MP3_STATUS_END;
     }
 
     send_data_vs1003_half_duplex(send_buffer, ret);
 
-    return VS1003_MP3_CONTINOUS_PLAYING;
+    return VS1003_MP3_STATUS_PLAYING;
 }
 
 #ifdef FULL_DUPLEX
@@ -415,7 +415,7 @@ static int select_music()
     return ret;
 }
 
-VS1003_MUSIC_COMMAND vs1003_command = 0;
+volatile VS1003_MUSIC_COMMAND vs1003_command = 0;
 sem_t vs1003_command_sem = {
     0,
 };
@@ -474,7 +474,7 @@ static void thread_vs1003()
     VS1003_MUSIC_COMMAND cmd = VS1003_MUSIC_NONE;
     VS1003_RESET_FLAG reset = VS1003_MUSIC_RESET_DO;
     VS1003_PLAY_STATUS_FLAG current_flag = VS1003_MUSIC_STOP;
-    int ret = 0;
+    VS1003_MP3_STATUS ret = VS1003_MP3_STATUS_NONE;
     char(*music_route[]) = {"./Mesmerize.mp3", "./Places_Like_That.mp3", "./Sunburst.mp3"};
 
     while (1)
@@ -568,11 +568,12 @@ static void thread_vs1003()
             break;
         }
 
-        if (ret == VS1003_MP3_END_MUSIC || ret == VS1003_MP3_ERR)
+        if (ret == VS1003_MP3_STATUS_END || ret == VS1003_MP3_STATUS_ERR)
         {
             current_music = VS1003_MUSIC_NONE;
             set_vs1003_command(VS1003_MUSIC_NONE);
             reset = VS1003_MUSIC_RESET_DO;
+            ret = VS1003_MP3_STATUS_NONE;
         }
     }
 }
