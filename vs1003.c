@@ -395,15 +395,16 @@ static int select_music()
     int ret = 0;
     int err = 0;
     printf("===================\n");
-    printf("1. Mesmerize.mp3\n");
-    printf("2. Places_Like_That.mp3\n");
-    printf("3. Sunburst.mp3\n");
-    printf("4. pause\n");
-    printf("5. resume\n");
-    printf("6. reset\n");
-    printf("7. volume info\n");
-    printf("8. up volume\n");
-    printf("9. down volume\n");
+    printf("1. pause\n");
+    printf("2. resume\n");
+    printf("3. reset\n");
+    printf("4. volume info\n");
+    printf("5. up volume\n");
+    printf("6. down volume\n");
+    printf("7. Mesmerize.mp3\n");
+    printf("8. Places_Like_That.mp3\n");
+    printf("9. Sunburst.mp3\n");
+    printf("10. custom music route\n");
     printf("===================\n");
     printf("select music:");
 
@@ -468,6 +469,8 @@ static int get_vs1003_command()
     return ret;
 }
 
+char custom_music_route[256] = {0, };
+
 static void thread_vs1003()
 {
     VS1003_MUSIC_COMMAND current_music = VS1003_MUSIC_NONE;
@@ -482,36 +485,6 @@ static void thread_vs1003()
         cmd = get_vs1003_command();
         switch (cmd)
         {
-        case VS1003_MUSIC_LIST1:
-            if (current_music != cmd)
-            {
-                reset = VS1003_MUSIC_RESET_DO;
-                current_flag = VS1003_MUSIC_PLAY;
-                current_music = cmd;
-            }
-            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
-            break;
-
-        case VS1003_MUSIC_LIST2:
-            if (current_music != cmd)
-            {
-                reset = VS1003_MUSIC_RESET_DO;
-                current_flag = VS1003_MUSIC_PLAY;
-                current_music = cmd;
-            }
-            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
-            break;
-
-        case VS1003_MUSIC_LIST3:
-            if (current_music != cmd)
-            {
-                reset = VS1003_MUSIC_RESET_DO;
-                current_flag = VS1003_MUSIC_PLAY;
-                current_music = cmd;
-            }
-            ret = play_vs1003_mp3_music(music_route[current_music - 1], &reset);
-            break;
-
         case VS1003_MUSIC_PAUSE:
             set_vs1003_command(VS1003_MUSIC_NONE);
             current_flag = VS1003_MUSIC_STOP;
@@ -564,6 +537,46 @@ static void thread_vs1003()
             down_vs1003_volume();
             break;
 
+        case VS1003_MUSIC_LIST1:
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - VS1003_MUSIC_LIST1], &reset);
+            break;
+
+        case VS1003_MUSIC_LIST2:
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - VS1003_MUSIC_LIST1], &reset);
+            break;
+
+        case VS1003_MUSIC_LIST3:
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(music_route[current_music - VS1003_MUSIC_LIST1], &reset);
+            break;
+
+        case VS1003_MUSIC_CUSTOM_ROUTE: //주의, 커스텀 루트를 바꿨다면 반드시 6. reset을 수행하자.
+            if (current_music != cmd)
+            {
+                reset = VS1003_MUSIC_RESET_DO;
+                current_flag = VS1003_MUSIC_PLAY;
+                current_music = cmd;
+            }
+            ret = play_vs1003_mp3_music(custom_music_route, &reset);
+            break;
+
         default:
             break;
         }
@@ -578,11 +591,48 @@ static void thread_vs1003()
     }
 }
 
-void thread_vs1003_command()
+static int get_custom_music_route()
 {
+    int err = 0;
+    memset(custom_music_route, 0, sizeof(custom_music_route));
+
+    printf("input your route : ");
+    err = scanf("%s", custom_music_route);
+    if(err != 1)
+    {
+        FATAL("overrun scanf");
+    }
+
+    if(access(custom_music_route, R_OK) < 0)
+    {
+        return -1;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+static void thread_vs1003_command()
+{
+    int vs1003_list = 0;
+    int ret = 0;
     while (1)
     {
-        set_vs1003_command(select_music());
+        vs1003_list = select_music();
+        if(vs1003_list == VS1003_MUSIC_CUSTOM_ROUTE)
+        {
+            ret = get_custom_music_route();
+        }
+
+        if(ret < 0)
+        {
+            FATAL("route not exist or read permmition need");
+        }
+        else
+        {
+            set_vs1003_command(vs1003_list);
+        }
     }
 }
 
