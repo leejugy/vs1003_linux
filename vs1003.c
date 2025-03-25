@@ -393,7 +393,14 @@ static void print_vs1003_reg_full_duplex(uint8_t reg)
 static int select_music()
 {
     char scanf_val[256] = {0, };
-    printf("===================\n");
+    printf("-----------------------------------------------\n");
+    printf("[\x1b[33mcurrent route files\x1b[0m]\n");
+    printf("-----------------------------------------------\n");
+    if(system("ls") < 0)
+    {
+        perror("fail to execute command ls");
+    }
+    printf("===============================================\n");
     printf("1. pause\n");
     printf("2. resume\n");
     printf("3. reset\n");
@@ -404,7 +411,7 @@ static int select_music()
     printf("8. Places_Like_That.mp3\n");
     printf("9. Sunburst.mp3\n");
     printf("10. custom music route\n");
-    printf("===================\n");
+    printf("===============================================\n");
     printf("select music:");
     if(fgets(scanf_val, sizeof(scanf_val), stdin));
 
