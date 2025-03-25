@@ -393,7 +393,6 @@ static void print_vs1003_reg_full_duplex(uint8_t reg)
 static int select_music()
 {
     int ret = 0;
-    int err = 0;
     printf("===================\n");
     printf("1. pause\n");
     printf("2. resume\n");
@@ -407,12 +406,7 @@ static int select_music()
     printf("10. custom music route\n");
     printf("===================\n");
     printf("select music:");
-
-    err = scanf("%d", &ret);
-    if (err != 1)
-    {
-        FATAL("scanf overrun");
-    }
+    if(scanf("%d", &ret));
     return ret;
 }
 
@@ -595,14 +589,8 @@ static void thread_vs1003()
 
 static int get_custom_music_route()
 {
-    int err = 0;
-
     printf("input your route : ");
-    err = scanf("%s", custom_music_route);
-    if(err != 1)
-    {
-        FATAL("overrun scanf");
-    }
+    if(scanf("%s", custom_music_route));
 
     if(access(custom_music_route, R_OK) < 0)
     {
