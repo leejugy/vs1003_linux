@@ -392,7 +392,7 @@ static void print_vs1003_reg_full_duplex(uint8_t reg)
 
 static int select_music()
 {
-    int ret = 0;
+    char scanf_val[256] = {0, };
     printf("===================\n");
     printf("1. pause\n");
     printf("2. resume\n");
@@ -406,8 +406,16 @@ static int select_music()
     printf("10. custom music route\n");
     printf("===================\n");
     printf("select music:");
-    if(scanf("%d", &ret));
-    return ret;
+    if(fgets(scanf_val, sizeof(scanf_val), stdin));
+
+    if(atoi(scanf_val)>VS1003_MUSIC_CUSTOM_ROUTE || atoi(scanf_val)<VS1003_MUSIC_NONE)
+    {
+        return VS1003_MUSIC_NONE;
+    }
+    else
+    {
+        return atoi(scanf_val);
+    }
 }
 
 volatile VS1003_MUSIC_COMMAND vs1003_command = 0;
@@ -590,7 +598,11 @@ static void thread_vs1003()
 static int get_custom_music_route()
 {
     printf("input your route : ");
-    if(scanf("%s", custom_music_route));
+    if(fgets(custom_music_route, sizeof(custom_music_route), stdin)); 
+    if(strtok(custom_music_route, "\n") == NULL)
+    {
+        return -1;
+    }
 
     if(access(custom_music_route, R_OK) < 0)
     {
